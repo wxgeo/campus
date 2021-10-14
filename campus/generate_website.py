@@ -35,7 +35,7 @@ from shutil import copy
 
 from mistune import markdown
 
-from paths import INDEX_TEMPLATE_PATH, Path
+from .paths import INDEX_TEMPLATE_PATH, Path
 
 
 
@@ -49,31 +49,38 @@ def translate_path(path: Path, src, dst: Path) -> Path:
 
 
 def relative_depth(path: Path, src: Path) -> int:
+    "Return the depth of the given path relatively to src."
     if not path.is_relative_to(src):
         raise ValueError(f'"{path}" should be a subdirectory of "{src}".')
     return len(path.parents) - len(src.parents)
 
 
-def _link_to(current: str, links: dict, step: int) -> str:
-    hrefs = list(links)
-    try:
-        i = (hrefs.index(current) + 1) % len(hrefs)
-    except ValueError:
-        return ''
-    href = hrefs[i]
-    title = links[href]
-    return f'<a href="../{href}">{title}</a>'
-
-
-def link_to_next(current: str, links: dict) -> str:
-    return _link_to(current, links, 1)
-
-
-def link_to_previous(current: str, links: dict) -> str:
-    return _link_to(current, links, -1)
+#def _link_to(current: str, links: dict, step: int) -> str:
+#    "Generate an <a> tag for `current` link, using `links` dictionnary."
+#    hrefs = list(links)
+#    try:
+#        i = (hrefs.index(current) + 1) % len(hrefs)
+#    except ValueError:
+#        return ''
+#    href = hrefs[i]
+#    title = links[href]
+#    return f'<a href="../{href}">{title}</a>'
+#
+#
+#def link_to_next(current: str, links: dict) -> str:
+#    return _link_to(current, links, 1)
+#
+#
+#def link_to_previous(current: str, links: dict) -> str:
+#    return _link_to(current, links, -1)
 
 
 def find_links(path: Path, html: str) -> dict:
+    """Extract all links from html code.
+
+    Return a dict with the following format:
+    {'directories': {'name': 'path'}, 'files': {'name': 'path'}}
+    """
     #print(path)
     all_links = findall(r'<a href="([^"]+)">([^<]+)</a>', html)
     directories = {}
@@ -97,10 +104,7 @@ def find_links(path: Path, html: str) -> dict:
 def find_title(html: str) -> str:
     "Return <h1> title content."
     m = search('<h1>([^<]+)</h1>', html)
-    if m:
-        return m.group(1)
-    else:
-        return None
+    return m.group(1) if m else None
 
 
 def generate_nav(links: dict, parent=True) -> str:
@@ -120,13 +124,11 @@ def generate_nav(links: dict, parent=True) -> str:
     return '\n'.join(content)
 
 
-def generate_website(directory: Path, src: Path, dst: Path, siblings={}, title=''):
+def generate_website(directory: Path, src: Path, dst: Path, siblings: dict, title=''):
     """Recursively generate website :
         - generate `index.html` files from the `index.md` files.
         - copy index.html files and all tracked files to output directory.
     """
-    depth = relative_depth(directory, src=src)
-
     # Convert Markdown to HTML
     index_file = directory / 'index.md'
     if not index_file.is_file():
@@ -145,18 +147,19 @@ def generate_website(directory: Path, src: Path, dst: Path, siblings={}, title='
         main = main.replace(f'<h1>{title}</h1>', '')
 
     # Add stylesheet
+    depth = relative_depth(directory, src=src)
     css_relative_path = Path(*(depth*['..'])) / 'css'
     css_name = f'{depth}.css'
     if not (dst / 'css' / css_name).is_file():
         css_name = 'default.css'
 
-    current = directory.name
+    # current = directory.name
     data = {'common_stylesheet': css_relative_path / 'all.css',
             'stylesheet': css_relative_path / css_name,
             'nav': generate_nav(siblings, parent=(directory != src)),
             'main': main,
-            'previous': link_to_previous(current, siblings),
-            'next': link_to_next(current, siblings),
+            # 'previous': link_to_previous(current, siblings),
+            # 'next': link_to_next(current, siblings),
             'title': title,
             }
     with open(INDEX_TEMPLATE_PATH) as f:
@@ -179,7 +182,6 @@ def generate_website(directory: Path, src: Path, dst: Path, siblings={}, title='
     for link, title in links['directories'].items():
         path = directory / link
         generate_website(path, src, dst, siblings=links['directories'], title=title)
-
 
 
 #def generate_modules():

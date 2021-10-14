@@ -5,24 +5,31 @@ https://packaging.python.org/guides/distributing-packages-using-setuptools/
 https://github.com/pypa/sampleproject
 """
 
+import pathlib
+#---------
+# https://github.com/pypa/pip/issues/7953
+import site
+import sys
+site.ENABLE_USER_SITE = "--user" in sys.argv[1:]
+#---------
+
 # Always prefer setuptools over distutils
 from setuptools import setup, find_packages
-import pathlib
 
-here = pathlib.Path(__file__).parent.resolve()
+HERE = pathlib.Path(__file__).parent.resolve()
 
 # Get the long description from the README file
-long_description = (here / 'README.md').read_text(encoding='utf-8')
-with (here / 'campus' / 'version.py').open(encoding='utf-8') as f:
+LONG_DESCRIPTION = (HERE / 'README.md').read_text(encoding='utf-8')
+with (HERE / 'campus' / 'version.py').open(encoding='utf-8') as f:
     for line in f:
         if line.startswith('__version__'):
-            version = line.split('=')[-1].strip()
+            CAMPUS_VERSION = line.split('=')[-1].strip()[1:-1]
 
 # Arguments marked as "Required" below must be included for upload to PyPI.
 # Fields marked as "Optional" may be commented out.
 
 setup(
-# This is the name of your project. The first time you publish this
+    # This is the name of your project. The first time you publish this
     # package, this name will be registered for you. It will determine how
     # users can install this project, e.g.:
     #
@@ -33,7 +40,7 @@ setup(
     # There are some restrictions on what makes a valid project name
     # specification here:
     # https://packaging.python.org/specifications/core-metadata/#name
-        name="campus",
+    name="campus",
 
     # Versions should comply with PEP 440:
     # https://www.python.org/dev/peps/pep-0440/
@@ -41,7 +48,7 @@ setup(
     # For a discussion on single-sourcing the version across setup.py and the
     # project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    version=version,  # Required
+    version=CAMPUS_VERSION,  # Required
 
     # This is a one-line description or tagline of what your project does. This
     # corresponds to the "Summary" metadata field:
@@ -49,7 +56,7 @@ setup(
     description="campus is a simple content delivery system built on git",  # Optional
     author="Nicolas Pourcelot",
     author_email="nicolas.pourcelot@gmail.com",
-    long_description=long_description,
+    long_description=LONG_DESCRIPTION,
     long_description_content_type="text/markdown",
     url="https://github.com/wxgeo/campus",
     classifiers=[
@@ -131,9 +138,7 @@ setup(
     # For example, the following would provide a command called `sample` which
     # executes the function `main` from this package when invoked:
     entry_points={  # Optional
-        'console_scripts': [
-                'campus=campus.script:main',
-        ],
+        'console_scripts': ['campus=campus.script:main'],
     },
 
 

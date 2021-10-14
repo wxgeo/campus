@@ -2,24 +2,78 @@
 Campus
 ======
 
-Campus permet de publier simplement sous forme de site HTML statique une arborescence de fichiers indexée par git, avec éventuellement un peu de mise en forme.
-Il est pensé comme un système de publications de cours notamment.
-L’idée est de pouvoir très rapidement mettre à jour le contenu, tout en profitant des avantages de git, notamment :
+Rational
+--------
+As a teacher, I frequenly share documents with my students, often using Moodle or an other learning platform.
+Often, students find a small error here or there in a document.
+While it's easy to quicky fix it, updating the document on the learning platform is often unecessary slow, involving many steps.
+Updating or adding a document should be an almost immediate process as well.
 
-- versioning ;
-- possibilité de créer des branches (par exemple pour commencer à travailler sur le cours de l’année prochaine).
+Campus aims to fix this.
 
-Pour ce faire, chaque dossier contiendra un fichier Markdown index.md, qui permettra de générer un fichier HTML.
-Ce fichier index.md peut contenir simplement la liste des fichiers à indexer, toute l’interface de navigation étant générée automatiquement, mais on peut aussi du contenu. Exemple :
+One of the idea of campus is that a filesystem is already used to organize content.
+Adding an index.md file in each folder is sufficient to specify which files I want to share with my students, and to add a few notes too.
+The course is also indexed in git, for file versioning.
+Campus then convert the file hierarchy and index.md files into a static website, which may be hosted on github, gitlab or bitbucket pages...
 
-    # DUT Info
-    Cette page regroupe mes cours de DUT Info 1<sup>re</sup> année.
+Every time some content change, calling `campus publish` is enough to commit changes and update the website online.
+
+
+Installation
+------------
+Campus use `git`, so you must install `git` first.
+
+Then, to install Campus, execute the following:
+
+    $ wget https://github.com/wxgeo/campus/archive/refs/heads/master.zip
+    $ cd campus-master
+    $ pip install .
+
     
-    [M115 Documents numériques](M115-webdoc)
+First use
+---------
+Suppose all the content you want to share is in `~/my-course`.
+
+First, you need to initialize this directory:
+
+    $ cd ~/my-course
+    $ campus init
+
+This will do the following:
+    - Make `my-course` a git repository (if it wasn't already)
+    - Create a `~/my-course/.config` folder, with css stylesheets and pictures that you may edit.
+    - Create a `~/my-course/.www` folder, which will also be a git repository.
+      Don't edit its content, as everything except `.www/.git` will be erased and regenerated at every update.
+    - Create an empty `~/my-course/index.md` file, which will be your website main entry point.
     
-    [M121 Mathématiques Discrètes](M121-mathematiques_discretes)
+This an simple example of `index.md` file:
+
+    #Python course for beginners
     
-    [M122 Algèbre linéaire](M122-algebre_lineaire)
+    This course is intended for beginners who wishes to learn the Python programming language. 
     
+    [Introduction to Python](intro.pdf)
     
-Ensuite, il suffira d’exécuter la commande `campus push` pour générer le site web et le publier. 
+    [Functional programming](func-programming)
+    
+    The following optional part will introduce you to object oriented programming.
+    
+    [Object oriented programming](oo-programming)
+    
+To generate a website in `~/my-course/.www`, just execute:
+    
+    $ campus make
+    
+Then, you'll have to configure both git repositories, ie. `~/my-course` and `~/my-course/.www`, so that running `git push` will push your master branch upstream.
+
+For `~/my-course/.www`, see github pages, gitlab pages or bitbucket pages documentation to see how to publish a static website.
+   
+Usage
+-----
+Once this has been done, for every content change, you'll now just have to execute:
+
+    $ cd ~/my-course
+    $ campus push
+    
+It will automatically call `campus make` and then push your changes online.
+

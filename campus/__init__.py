@@ -1,1 +1,6 @@
- from version import version as __version__
+"""
+Campus package.
+
+"""
+
+from .version import __version__

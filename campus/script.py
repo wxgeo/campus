@@ -9,21 +9,22 @@ Created on Wed Oct 13 17:14:48 2021
 
 from argparse import ArgumentParser
 from subprocess import run as _run
-from os.path import isdir
+from os.path import isdir, isfile
 from shutil import rmtree, copytree
 from pathlib import Path
 
-from paths import OUTPUT_PATH, STYLE_PATH
-from generate_website import generate_website
+from .paths import OUTPUT_PATH, STYLE_PATH, PACKAGE_PATH
+from .generate_website import generate_website
 
-def run(*args, dry_run=True, **kw):
-    kw.setdefault('check', True)
+def run(*args, dry_run=False, **kw):
+    'subprocess.run() called with `check=True`.'
     if dry_run:
-        print('Execute `%s`' % ' '.join(args))
-    else:
-        _run(*args, **kw)
+        print('Execute `%s`' % args)
+        return None
+    return _run(*args, check=True, **kw)
 
 def main(args=None):
+    "Main entry point, called whenever `campus` command is executed."
     parser = ArgumentParser(description='Light content distribution system.')
     subparsers = parser.add_subparsers(help='sub-command help')
     # create the parser for the "init" command
@@ -43,26 +44,34 @@ def main(args=None):
     parsed_args = parser.parse_args(args)
 
     parsed_args.func(**vars(parsed_args))
+    #XXX: campus sans argument devrait renvoyer l'aide !
 
 
-def init(force=False):
+def init(force=False, **kw):
     "Implement `campus init` command."
     # Copy styles data (ccs and pictures) in a .config folder.
     if force:
-        rmtree('.config')
+        rmtree('.config', ignore_errors=True)
+        rmtree(OUTPUT_PATH, ignore_errors=True)
     if isdir('.config'):
         print('Nothing done, since repository seems already configured.\n'
               'Use `campus init --force` if you want to override existing configuration.')
         return
-    else:
-        copytree(STYLE_PATH, '.config')
+    copytree(STYLE_PATH, '.config')
 
     # Initialize root folder as a git repository if needed.
     if not isdir('.git'):
         run(['git', 'init'])
+    gitignore_OK = False
+    if isfile('.gitignore'):
+        with open('.gitignore') as f:
+            gitignore_OK = any(line.strip() == f'{OUTPUT_PATH.name}/' for line in f)
+    if not gitignore_OK:
+        with open('.gitignore', 'a') as f:
+            f.write(f'\n{OUTPUT_PATH.name}/\n')
 
     # Create an empty index.md file
-    open(Path.cwd() / 'index.md').close()
+    (Path.cwd() / 'index.md').touch()
 
     # Create the output folder, where the website will be generated.
     if not OUTPUT_PATH.is_dir():
@@ -75,18 +84,18 @@ def init(force=False):
         run(['git', 'init'], cwd=OUTPUT_PATH)
 
 
-def make():
+def make(**kw):
     "Implement `campus make` command."
     (OUTPUT_PATH / '.git').replace('.config/tmp_output_git')
     rmtree(OUTPUT_PATH)
     Path('.config/tmp_output_git').replace(OUTPUT_PATH / '.git')
     copytree(Path('.config/css'), OUTPUT_PATH / 'css')
     copytree(Path('.config/pic'), OUTPUT_PATH / 'pic')
-    generate_website()
+    generate_website(PACKAGE_PATH, src=PACKAGE_PATH, dst=OUTPUT_PATH, siblings={})
     print("campus make")
 
 
-def push(message=None):
+def push(message=None, **kw):
     "Implement `campus push` command."
     # Commit changes in root directory (source), then push.
     commit_cmd = ['git', 'commit', '-a']
@@ -101,74 +110,3 @@ def push(message=None):
     # Commit changes in output directory (website).
     run(commit_cmd, cwd=OUTPUT_PATH)
     run(['git', 'push'], cwd=OUTPUT_PATH)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#from os import makedirs
-#from os.path import join, realpath, expanduser, isdir
-#from shutil import rmtree, copytree
-#
-#from generate_index import generate_index
-#
-##<DEBUG>
-#import sys
-#sys.argv = ['compile.py', '~/Dropbox/Test-TR']
-##</DEBUG>
-#
-#parser = argparse.ArgumentParser()
-#parser.add_argument('path', default='.', nargs='?')
-#args = parser.parse_args()
-#
-#
-## Création d'un dossier HTML
-#ROOT = realpath(expanduser(args.path))
-#
-#HTML_DIR = join(ROOT, 'html')
-#CSS = join(HTML_DIR, 'css')
-#PIC = join(HTML_DIR, 'pic')
-#
-## Test if a css directory exists as a (minimal) precaution.
-#if isdir(CSS):
-#    rmtree(HTML_DIR)
-#makedirs(HTML_DIR)
-#copytree(join(ROOT, '.config', 'css'), CSS)
-#copytree(join(ROOT, '.config', 'pic'), PIC)
-#generate_index(ROOT, src=ROOT, dst=HTML_DIR)
-
-
-
-
-
-# ------------------------------
-# On parcourt le dossier
-#for root, dirs, files in walk(path):
-#    try:
-#        dirs.remove('html')
-#    except ValueError:
-#        pass
-#    if 'index.md' in files:
-#        output = join(root, 'index.html')
-#        md_file = join(root, 'index.md')
-#        generate(output, md_file, TEMPLATE)
-
-
-#with open(join(path, 'index.md'))
-
-
