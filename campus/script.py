@@ -14,6 +14,7 @@ from shutil import rmtree, copytree
 from pathlib import Path
 
 from paths import OUTPUT_PATH, STYLE_PATH
+from generate_website import generate_website
 
 def run(*args, dry_run=True, **kw):
     kw.setdefault('check', True)
@@ -76,6 +77,12 @@ def init(force=False):
 
 def make():
     "Implement `campus make` command."
+    (OUTPUT_PATH / '.git').replace('.config/tmp_output_git')
+    rmtree(OUTPUT_PATH)
+    Path('.config/tmp_output_git').replace(OUTPUT_PATH / '.git')
+    copytree(Path('.config/css'), OUTPUT_PATH / 'css')
+    copytree(Path('.config/pic'), OUTPUT_PATH / 'pic')
+    generate_website()
     print("campus make")
 
 
