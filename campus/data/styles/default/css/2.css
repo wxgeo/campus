@@ -1,0 +1,47 @@
+body {
+    display:grid;
+    grid-template-columns: auto;
+    grid-template-rows: auto auto 1fr;
+    grid-row-gap: 0;
+}
+
+
+
+/* all.css | http://localhost:8000/css/all.css */
+
+header {
+  /* grid-column: 1/3; */
+  grid-column: 1;
+}
+
+main {
+  /* margin: auto; */
+  grid-row: 3;
+    border-top-left-radius: 0;
+}
+
+nav ol {
+  /* margin: 50px 10px 20px 20px; */
+  /* display: inline-flex; */
+  /* flex-direction: column; */
+  margin: 0;
+  display: flex;
+  flex-direction: row;
+}
+
+/* Élément | http://localhost:8000/M121-mathematiques_discretes/chapitre%201%20-%20Terminologie%20et%20M%C3%A9thodologie/ */
+
+body > nav:nth-child(2) {
+  grid-row: 2;
+  grid-column: 1;
+  display: flex;
+}
+
+nav ol li {
+  margin:0;
+}
+
+
+nav ol li:first-child {
+    border-radius: 0;
+}
