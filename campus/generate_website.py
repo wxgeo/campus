@@ -135,8 +135,8 @@ def generate_website(directory: Path, src: Path, dst: Path, siblings: dict, titl
         print(f"WARNING: {directory!r} has no 'index.md' file.")
         main = ''
     else:
-        with open(index_file) as f:
-            main = markdown(f.read(encoding='utf8'), escape=False)
+        with open(index_file, encoding='utf8') as f:
+            main = markdown(f.read(), escape=False)
 
     # Extract page title (it will be reinjected later).
     main_title = find_title(main)
@@ -162,10 +162,10 @@ def generate_website(directory: Path, src: Path, dst: Path, siblings: dict, titl
             # 'next': link_to_next(current, siblings),
             'title': title,
             }
-    with open(INDEX_TEMPLATE_PATH) as f:
-        html = f.read(encoding='utf8')
+    with open(INDEX_TEMPLATE_PATH, encoding='utf8') as f:
+        html = f.read()
     for key in data:
-        html = html.replace(f'[${key.upper()}]', data[key])
+        html = html.replace(f'[${key.upper()}]', str(data[key]))
 
     links = find_links(directory, main)
 

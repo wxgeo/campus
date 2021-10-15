@@ -88,11 +88,12 @@ def make(**kw):
     "Implement `campus make` command."
     (OUTPUT_PATH / '.git').replace('.config/tmp_output_git')
     rmtree(OUTPUT_PATH)
+    OUTPUT_PATH.mkdir()
     Path('.config/tmp_output_git').replace(OUTPUT_PATH / '.git')
     copytree(Path('.config/css'), OUTPUT_PATH / 'css')
     copytree(Path('.config/pic'), OUTPUT_PATH / 'pic')
-    generate_website(PACKAGE_PATH, src=PACKAGE_PATH, dst=OUTPUT_PATH, siblings={})
-    print("campus make")
+    generate_website(Path.cwd(), src=Path.cwd(), dst=OUTPUT_PATH, siblings={})
+    print("campus make executed.")
 
 
 def push(message=None, **kw):
