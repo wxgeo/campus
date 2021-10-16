@@ -3,6 +3,7 @@
     --color-A: #bbbeff;
     --color-B: #a7bfff;
     --color-C: #97afff;
+    --color-D: #758cec;
     --color-dark: #404099;
     --opacity: rgba(255, 255, 255, 0.8);
 
@@ -85,7 +86,7 @@ nav {
     z-index: 100;
 }
 
-nav ol {
+nav>ol {
     display: flex;
     flex-direction: row;
     flex-wrap: wrap;
@@ -94,40 +95,46 @@ nav ol {
 }
 
 nav li {
-    /* Geometry */
     display: inline-flex;
     align-items: center;
     margin: 0;
-    height: 2em;
+    padding: 0;
+}
+
+nav li>a,
+nav li>a:visited {
+    /* Geometry */
+    flex: 1;
     padding: 5px 20px;
     /* Style */
-    background-color: var(--color-C);
-}
-
-nav li:hover {
-    background-color: var(--couleur-menu-selection);
-}
-
-nav li:first-child {
-    background-color: var(--color-dark);
-    border-radius: 0 0 0 1rem;
-}
-
-nav li:first-child:hover {
-    background-color: var(--couleur-menu-selection-retour);
-}
-
-
-nav li:last-child {
-    border-radius: 0 0 1rem 0;
-}
-
-nav li a,
-navl li a:visited {
+    background-color: var(--color-D);
     color: white;
     text-decoration: none;
     font-variant-caps: small-caps;
-    flex: 1;
+}
+
+nav li>a:hover {
+    background-color: var(--color-C);
+}
+
+nav li a.current {
+    background-color: #00000000;
+    pointer-events: none;
+    cursor: default;
+}
+
+nav li:first-child>a {
+    /*background-color: var(--color-dark);*/
+    border-radius: 0 0 0 1rem;
+}
+
+nav li:first-child>a:hover {
+    background-color: var(--color-C);
+}
+
+
+nav li:last-child>a {
+    border-radius: 0 0 1rem 0;
 }
 
 /*
@@ -184,9 +191,12 @@ main a:visited {
     display:inline-flex;
 }
 
+main a:hover,
+main a:visited:hover {
+    background-color: var(--color-C);
+}
 
-main .before-directory {
-    background-image: url(../pic/dossier.svg);
+main .before {
     background-size: auto 100%;
     background-repeat: no-repeat;
     width: 1.7rem;
@@ -196,17 +206,10 @@ main .before-directory {
     top:0px;
 
 }
-
-
-main a:hover,
-main a:visited:hover {
-    background-color: var(--color-C);
+main .before.directory {
+    background-image: url(../pic/dossier.svg);
 }
-
-main a:hover::before {
-    background-image: none;
-}
-
-main a[href$=".pdf"] {
+main .before.pdf {
     background-image: url(../pic/icon_pdf.svg);
 }
+

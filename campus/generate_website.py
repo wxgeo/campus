@@ -58,14 +58,14 @@ def relative_depth(path: Path, src: Path) -> int:
     return len(path.parents) - len(src.parents)
 
 
-def extract_links(path: Path, html: str) -> dict:
+def extract_links(path: Path, html: str) -> ({str: {str: str}}, str):
     """Extract all links from html code, and add a <span> tag before them.
 
     The class of the <span> tag will specify the type of link, and may be used
     by the stylesheet later.
 
-    Return a dict with the following format:
-    {'directories': {'name': 'path'}, 'files': {'name': 'path'}}
+    Return a tuple with the following format:
+    ({'directories': {'name': 'path'}, 'files': {'name': 'path'}}, 'HTML code')
     """
     directories = {}
     files = {}
@@ -81,32 +81,20 @@ def extract_links(path: Path, html: str) -> dict:
         # Store links that point to directories.
         if _link.is_dir():
             directories[link] = title
-            css_class = 'before-directory'
+            css_class = '"before directory"'
         # Store links that point to files.
         elif _link.is_file():
             files[link] = title
-            css_class = 'before-file'
+            css_class = f'"before file {_link.suffix[1:]}"'
         # Neither directory nor file: this is a broken link !
         else:
             print(f"WARNING: '{_link!s}' link seems to be broken !")
-            css_class = 'before-broken-link'
+            css_class = '"before broken-link"'
         return f"<span class={css_class}></span>{string}"
 
-    all_links = sub(r'<a href="([^"]+)">([^<]+)</a>', classify, html)
-    #print(all_links)
-    for link, title in all_links:
-        _link = path / link
-        # List links that point to directories.
-        if _link.is_dir():
-            directories[link] = title
-            # links must be left relative, so we won't need to convert them
-            # when generating the navigation bar.
-        elif _link.is_file():
-            files[link] = title
-        else:
-            print(f"WARNING: {_link!r} is referenced but not found.")
+    html = sub(r'<a href="([^"]+)">([^<]+)</a>', classify, html)
 
-    return {'directories': directories, 'files': files}
+    return {'directories': directories, 'files': files}, html
 
 
 def find_title(html: str) -> str:
@@ -115,19 +103,19 @@ def find_title(html: str) -> str:
     return match.group(1) if match else None
 
 
-def generate_nav(links: dict, parent=True) -> str:
+def generate_nav(links: dict, directory: Path, parent=True) -> str:
     """Generate the navigation menu content.
 
     `links` dict format is {'href': 'title'}"""
     content = ['<ol>']
     if parent:
         content.append('<li><a href="..">..</a></li>')
-    for href, title in links.items():
-        content.append('<li>')
-        content.append(f'<a href="../{href}">')
-        content.append(title)
-        content.append('</a>')
-        content.append('</li>')
+    for link, title in links.items():
+        href = f'../{link}'
+        # The `current` css class is used to indicate that the link is actually
+        # pointing to the current page.
+        css_class = 'current' if (directory / href).resolve() == directory else ''
+        content.append(f'<li><a href="{href}" class="{css_class}">{title}</a></li>')
     content.append('</ol>')
     return '\n'.join(content)
 
@@ -137,7 +125,7 @@ def read_index_md_as_html(directory: Path) -> str:
     # Convert Markdown to HTML
     index_file = directory / 'index.md'
     if not index_file.is_file():
-        print(f"WARNING: {directory!r} has no 'index.md' file.")
+        print(f'WARNING: "{directory}" has no "index.md" file.')
         main = ''
     else:
         with open(index_file, encoding='utf8') as file:
@@ -150,6 +138,7 @@ def generate_website(directory: Path, src: Path, dst: Path, siblings: dict, titl
         - generate `index.html` files from the `index.md` files.
         - copy index.html files and all tracked files to output directory.
     """
+    assert all(isinstance(d, Path) for d in (directory, src, dst))
     main = read_index_md_as_html(directory)
 
     # Extract page title (it will be reinjected later).
@@ -160,7 +149,7 @@ def generate_website(directory: Path, src: Path, dst: Path, siblings: dict, titl
         # (It will be automatically generated in <header>.)
         main = main.replace(f'<h1>{title}</h1>', '')
 
-    links = extract_links(directory, main)
+    links, main = extract_links(directory, main)
 
     # Add stylesheet
     depth = relative_depth(directory, src=src)
@@ -172,7 +161,7 @@ def generate_website(directory: Path, src: Path, dst: Path, siblings: dict, titl
 
     data = {'common_stylesheet': css_relative_path / 'all.css',
             'stylesheet': css_relative_path / css_name,
-            'nav': generate_nav(siblings, parent=(directory != src)),
+            'nav': generate_nav(siblings, directory, parent=(directory != src)),
             'main': main,
             'title': title,
             }
