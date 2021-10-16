@@ -116,7 +116,7 @@ def generate_nav(links: dict, parent=True) -> str:
     `links` dict format is {'href': 'title'}"""
     content = ['<ol>']
     if parent:
-        content.append('<li><a href="..">..&nbsp;&nbsp;</a></li>')
+        content.append('<li><a href="..">..</a></li>')
     for href, title in links.items():
         content.append('<li>')
         content.append(f'<a href="../{href}">')
