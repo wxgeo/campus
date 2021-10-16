@@ -38,20 +38,23 @@ from mistune import markdown
 from .paths import INDEX_TEMPLATE_PATH, Path
 
 
-
+def assert_relative_to(path, src):
+    "Raise a `ValueError` if path is not relative to `src`."
+    try:
+        path.relative_to(src)
+    except ValueError:
+        raise ValueError(f'"{path}" should be a subdirectory of "{src}".')
 
 
 def translate_path(path: Path, src, dst: Path) -> Path:
     "Transform {src}/subpath into {dst}/subpath."
-    if not path.is_relative_to(src):
-        raise ValueError(f'"{path}" should be a subdirectory of "{src}".')
+    assert_relative_to(path, src)
     return dst / path.relative_to(src)
 
 
 def relative_depth(path: Path, src: Path) -> int:
     "Return the depth of the given path relatively to src."
-    if not path.is_relative_to(src):
-        raise ValueError(f'"{path}" should be a subdirectory of "{src}".')
+    assert_relative_to(path, src)
     return len(path.parents) - len(src.parents)
 
 
