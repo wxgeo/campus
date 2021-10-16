@@ -4,7 +4,15 @@
     --couleur-menu-retour: #4383bf;
     --couleur-menu-selection: #8bc3f7;
     --couleur-menu-selection-retour: #539ce0;
-    
+    --couleur-menu-A: #bbbeff;
+    --couleur-menu-B: #a7bfff;
+    --couleur-menu-C: #97afff;
+    --couleur-menu-D: #404099;
+    --couleur-menu-A: #bbbeff;
+    --couleur-menu-B: #a7bfff;
+    --couleur-menu-C: #97afff;
+    --couleur-menu-D: #404099;
+
 }
 
 * {
@@ -15,10 +23,10 @@ h1 {
     background-color: aliceblue;
     text-align: center;
     padding: 10px;
-    border-style: solid none;
-    border-color:cornflowerblue;
-    color: cornflowerblue;
-    border-width: 1px 0px 2px 0px;
+    border-style: solid none solid;
+    border-color:var(--couleur-menu-C);
+    color: var(--couleur-menu-B);
+    border-width: 2px 0px 2px 0px;
 }
 
 header {
@@ -26,19 +34,39 @@ header {
     grid-row: 1;
 }
 
+html {
+    height:100%;
+}
+
 body {
-    display:grid;
-    grid-template-columns: auto 1fr;
-    grid-template-rows: auto 1fr;
+    height:100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    background-color: var(--couleur-menu-B);
+    opacity: 1;
+    background-size: 5px 5px;
+    margin:0;
+    background-image: repeating-linear-gradient(45deg, var(--couleur-menu-A) 0,
+                                                   var(--couleur-menu-A) 1px,
+                                                   var(--couleur-menu-B) 0,
+                                                   var(--couleur-menu-B) 50%);
 }
 
 main {
     margin:auto;
-    max-width: calc(100%-40px);
-    min-width: 80%;
-    border:solid var(--couleur-menu);
-    border-radius: 1em;
-    padding: 1em;
+    /*max-width: calc(100%-40px);
+    min-width: 80%;*/
+    /*border:solid var(--couleur-menu-B);*/
+    border-radius: 0em 1em 0em 0em;
+    border:dotted;
+    border-width:0 0 0 6px;
+    border-color:var(--couleur-menu-D) ;
+    padding: 2em 6em;
+    height:100%;
+    background-color:rgba(255, 255, 255, 0.6);
+    max-width:800px;
+    clip-path: polygon(3px 0, 3px 100%, 100% 100%, 100% 0);
 }
 
 nav ol {
@@ -84,18 +112,90 @@ navl li a:visited {
     flex: 1;
 }
 
+/*
 main a,
 main a:visited {
-    color: #777777;
+    color:white;
     text-decoration: none;
-    display: inline-flex;
+    display: flex;
+    flex-direction: row-reverse;
+    flex-wrap: nowrap;
+    align-content: center;
+    justify-content: center;
+    font-size: large;
+    border-radius: 4px;
     height: 1.9em;
     align-items: center;
     padding: .2em .2em .2em 2.5em;
     margin: .1em;
-     background-image: url(../pic/dossier.svg);
     background-size: contain;
     background-repeat: no-repeat;
+    width:100%;
+    height:5em;
+    margin:0;
+    padding:5px;
+    padding-left:15px;
+    text-align: center;
+    background-color:var(--couleur-menu-D);
+    position:relative;
+}
+*/
+main a,
+main a:visited {
+    color:white;
+    text-decoration: none;
+    align-content: center;
+    justify-content: center;
+    font-size: large;
+    border-radius: 4px;
+    height: 1.9em;
+    align-items: center;
+    margin: .1em;
+    background-size: contain;
+    background-repeat: no-repeat;
+    width:100%;
+    height:5em;
+    margin:5px 0;
+    padding:5px 15px;
+    text-align: center;
+    background-color:var(--couleur-menu-D);
+    position:relative;
+}
+
+/*
+main a::before {
+    content:"";
+    background-image: url(../pic/dossier.svg);
+    background-size: auto 100%;
+    background-repeat: no-repeat;
+    display:block;
+    height:100%;
+    width:100%;
+    position:absolute;
+    opacity:0.2;
+}
+*/
+/*
+main a::before {
+    content:"a";
+    background-image: url(../pic/dossier.svg);
+    background-size: auto 100%;
+    background-repeat: no-repeat;
+    display:block;
+    height:100%;
+    width:100%;
+    position:absolute;
+    opacity:0.2;
+}
+*/
+
+main a:hover,
+main a:visited:hover {
+    background-color: var(--couleur-menu-C);
+}
+
+main a:hover::before {
+    background-image: none;
 }
 
 main a[href$=".pdf"] {
