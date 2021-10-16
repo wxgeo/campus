@@ -12,8 +12,9 @@ from subprocess import run as _run
 from os.path import isdir, isfile
 from shutil import rmtree, copytree
 from pathlib import Path
+import re
 
-from .paths import OUTPUT_PATH, STYLE_PATH, PACKAGE_PATH
+from .paths import OUTPUT_PATH, STYLE_PATH
 from .generate_website import generate_website
 
 def run(*args, dry_run=False, **kw):
@@ -28,23 +29,34 @@ def main(args=None):
     parser = ArgumentParser(description='Light content distribution system.')
     subparsers = parser.add_subparsers(help='sub-command help')
     # create the parser for the "init" command
-    parser_init = subparsers.add_parser('init', help='a help')
+    parser_init = subparsers.add_parser('init', help='initialize folder')
     parser_init.add_argument('--force', action='store_true', help='init --force help')
     parser_init.set_defaults(func=init)
 
     # create the parser for the "make" command
-    parser_make = subparsers.add_parser('make', help='make help')
+    parser_make = subparsers.add_parser('make', help='generate website (locally)')
     parser_make.set_defaults(func=make)
 
     # create the parser for the "push" command
-    parser_push = subparsers.add_parser('push', help='push help')
+    parser_push = subparsers.add_parser('push', help='generate and upload website')
     parser_push.add_argument('-m', '--message', type=str, help='push -m help')
     parser_push.set_defaults(func=push)
 
-    parsed_args = parser.parse_args(args)
+    #create the parser for the "index" command
+    parser_index = subparsers.add_parser('index', help='add file to index.md')
+    parser_index.add_argument('filename', metavar='FILENAME', type=str,
+                              help='add file FILENAME to index.md')
+    parser_index.set_defaults(func=index)
 
-    parsed_args.func(**vars(parsed_args))
-    #XXX: campus sans argument devrait renvoyer l'aide !
+    #create the parser for the "indexall" command
+    parser_index = subparsers.add_parser('indexall', help='add every file and dir to index.md')
+    parser_index.set_defaults(func=indexall)
+
+    parsed_args = parser.parse_args(args)
+    try:
+        parsed_args.func(**vars(parsed_args))
+    except AttributeError:
+        parser.print_help()
 
 
 def init(force=False, **kw):
@@ -62,16 +74,15 @@ def init(force=False, **kw):
     # Initialize root folder as a git repository if needed.
     if not isdir('.git'):
         run(['git', 'init'])
-    gitignore_OK = False
+    gitignore_ok = False
     if isfile('.gitignore'):
-        with open('.gitignore') as f:
-            gitignore_OK = any(line.strip() == f'{OUTPUT_PATH.name}/' for line in f)
-    if not gitignore_OK:
-        with open('.gitignore', 'a') as f:
-            f.write(f'\n{OUTPUT_PATH.name}/\n')
+        with open('.gitignore') as file:
+            gitignore_ok = any(line.strip() == f'{OUTPUT_PATH.name}/' for line in file)
+    if not gitignore_ok:
+        with open('.gitignore', 'a') as file:
+            file.write(f'\n{OUTPUT_PATH.name}/\n')
 
-    # Create an empty index.md file
-    (Path.cwd() / 'index.md').touch()
+    index()
 
     # Create the output folder, where the website will be generated.
     if not OUTPUT_PATH.is_dir():
@@ -83,9 +94,54 @@ def init(force=False, **kw):
     if not isdir(OUTPUT_PATH / '.git'):
         run(['git', 'init'], cwd=OUTPUT_PATH)
 
+def _add_to_index(path, index_md):
+    "Add `path` to index.md file."
+
+    with open(index_md, 'a') as file:
+        name = str(path.stem).replace('_', ' ')
+        file.write(f'\n[{name}](<{path}>)\n')
+        print(f"{name} indexed.")
+
+
+def index(glob=None, **kw):
+    """Implement `campus index` command.
+
+    Generate `index.md` file if needed and add all files matching `glob` to it."""
+    # Create an empty index.md file
+    current_dir = Path.cwd()
+    index_md = (current_dir / 'index.md')
+    if not index_md.is_file():
+        with open(index_md, 'w') as file:
+            file.write(f"# {current_dir.name.replace('_', ' ')}\n\n")
+    if glob is None:
+        return
+    already_indexed = set()
+    with open(index_md) as file:
+        for line in file:
+            match = re.match(r'\s*\[.+\]\(\<?([^<>]+)\>?\)', line)
+            if match:
+                already_indexed.add(match.group(1))
+    indexed = False
+    for path in sorted(current_dir.glob(glob)):
+        path = Path(path).relative_to(Path.cwd())
+        str_path = str(path)
+        if (str_path != 'index.md' and str_path[0] != '.'
+                                   and str_path not in already_indexed):
+            _add_to_index(path, index_md)
+            indexed = True
+    if not indexed:
+        print("It seems there's nothing new to index.")
+
+def indexall(**kw):
+    "Implement `campus indexall` command."
+    index(glob='*')
 
 def make(**kw):
     "Implement `campus make` command."
+    if not Path('.config').is_dir():
+        print("WARNING: this folder is not initialized as campus root directory.\n"
+              "Change to root directory, or initialized it using `campus init`.")
+        return
     (OUTPUT_PATH / '.git').replace('.config/tmp_output_git')
     rmtree(OUTPUT_PATH)
     OUTPUT_PATH.mkdir()
