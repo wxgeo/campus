@@ -14,13 +14,6 @@
 
 
 /*
-html{
-    display: flex;
-    justify-content: center;
-}*/
-
-
-/*
 ============
     BODY
 ============
@@ -156,23 +149,22 @@ main {
     clip-path: polygon(3px 0, 3px 100%, 100% 100%, 100% 0);
     /* Style */
     background-color:var(--opacity);
-    /*max-width: calc(100%-40px);
-    max-width:1000px;
-    min-width: 80%;*/
-    /*border:solid var(--color-B);*/
 }
 
-main :first-child {
+main>:first-child {
     margin-top: 3rem;
 }
 
-main :last-child {
+main>:last-child {
     margin-bottom: 4rem;
 }
 
+
 main p {
     margin: 1.5rem 4.5rem;
+    padding:0;
 }
+
 
 main a,
 main a:visited {
@@ -186,7 +178,21 @@ main a:visited {
     text-decoration: none;
     font-size: large;
     background-color:var(--color-dark);
+    display:inline-flex;
 }
+
+
+main a::before {
+    content:"";
+    font-size: 4px;
+    background-image: url(../pic/dossier.svg);
+    background-size: auto 100%;
+    background-repeat: no-repeat;
+    height: 20px;
+    width: 1.7rem;
+    display:inline-block;
+}
+
 
 main a:hover,
 main a:visited:hover {
