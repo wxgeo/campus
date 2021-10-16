@@ -30,7 +30,7 @@ On peut commencer par générer un dictionnaire :
 
 
 """
-from re import findall, search
+from re import sub, search, Match
 from shutil import copy
 
 from mistune import markdown
@@ -58,36 +58,41 @@ def relative_depth(path: Path, src: Path) -> int:
     return len(path.parents) - len(src.parents)
 
 
-#def _link_to(current: str, links: dict, step: int) -> str:
-#    "Generate an <a> tag for `current` link, using `links` dictionnary."
-#    hrefs = list(links)
-#    try:
-#        i = (hrefs.index(current) + 1) % len(hrefs)
-#    except ValueError:
-#        return ''
-#    href = hrefs[i]
-#    title = links[href]
-#    return f'<a href="../{href}">{title}</a>'
-#
-#
-#def link_to_next(current: str, links: dict) -> str:
-#    return _link_to(current, links, 1)
-#
-#
-#def link_to_previous(current: str, links: dict) -> str:
-#    return _link_to(current, links, -1)
+def extract_links(path: Path, html: str) -> dict:
+    """Extract all links from html code, and add a <span> tag before them.
 
-
-def find_links(path: Path, html: str) -> dict:
-    """Extract all links from html code.
+    The class of the <span> tag will specify the type of link, and may be used
+    by the stylesheet later.
 
     Return a dict with the following format:
     {'directories': {'name': 'path'}, 'files': {'name': 'path'}}
     """
-    #print(path)
-    all_links = findall(r'<a href="([^"]+)">([^<]+)</a>', html)
     directories = {}
     files = {}
+
+    def classify(match: Match):
+        "Classify links (is it directory or a file ?)."
+        # This is an internet link, pass...
+        string = match.group(0)
+        if '://' in string:
+            return string
+        link, title = match.groups()
+        _link = path / link
+        # Store links that point to directories.
+        if _link.is_dir():
+            directories[link] = title
+            css_class = 'before-directory'
+        # Store links that point to files.
+        elif _link.is_file():
+            files[link] = title
+            css_class = 'before-file'
+        # Neither directory nor file: this is a broken link !
+        else:
+            print(f"WARNING: '{_link!s}' link seems to be broken !")
+            css_class = 'before-broken-link'
+        return f"<span class={css_class}></span>{string}"
+
+    all_links = sub(r'<a href="([^"]+)">([^<]+)</a>', classify, html)
     #print(all_links)
     for link, title in all_links:
         _link = path / link
@@ -106,8 +111,8 @@ def find_links(path: Path, html: str) -> dict:
 
 def find_title(html: str) -> str:
     "Return <h1> title content."
-    m = search('<h1>([^<]+)</h1>', html)
-    return m.group(1) if m else None
+    match = search('<h1>([^<]+)</h1>', html)
+    return match.group(1) if match else None
 
 
 def generate_nav(links: dict, parent=True) -> str:
@@ -127,19 +132,25 @@ def generate_nav(links: dict, parent=True) -> str:
     return '\n'.join(content)
 
 
-def generate_website(directory: Path, src: Path, dst: Path, siblings: dict, title=''):
-    """Recursively generate website :
-        - generate `index.html` files from the `index.md` files.
-        - copy index.html files and all tracked files to output directory.
-    """
+def read_index_md_as_html(directory: Path) -> str:
+    "Read index.md file and return corresponding HTML."
     # Convert Markdown to HTML
     index_file = directory / 'index.md'
     if not index_file.is_file():
         print(f"WARNING: {directory!r} has no 'index.md' file.")
         main = ''
     else:
-        with open(index_file, encoding='utf8') as f:
-            main = markdown(f.read(), escape=False)
+        with open(index_file, encoding='utf8') as file:
+            main = markdown(file.read(), escape=False)
+    return main
+
+
+def generate_website(directory: Path, src: Path, dst: Path, siblings: dict, title=''):
+    """Recursively generate website :
+        - generate `index.html` files from the `index.md` files.
+        - copy index.html files and all tracked files to output directory.
+    """
+    main = read_index_md_as_html(directory)
 
     # Extract page title (it will be reinjected later).
     main_title = find_title(main)
@@ -149,6 +160,8 @@ def generate_website(directory: Path, src: Path, dst: Path, siblings: dict, titl
         # (It will be automatically generated in <header>.)
         main = main.replace(f'<h1>{title}</h1>', '')
 
+    links = extract_links(directory, main)
+
     # Add stylesheet
     depth = relative_depth(directory, src=src)
     css_relative_path = Path(*(depth*['..'])) / 'css'
@@ -156,35 +169,31 @@ def generate_website(directory: Path, src: Path, dst: Path, siblings: dict, titl
     if not (dst / 'css' / css_name).is_file():
         css_name = 'default.css'
 
-    # current = directory.name
+
     data = {'common_stylesheet': css_relative_path / 'all.css',
             'stylesheet': css_relative_path / css_name,
             'nav': generate_nav(siblings, parent=(directory != src)),
             'main': main,
-            # 'previous': link_to_previous(current, siblings),
-            # 'next': link_to_next(current, siblings),
             'title': title,
             }
-    with open(INDEX_TEMPLATE_PATH, encoding='utf8') as f:
-        html = f.read()
+    with open(INDEX_TEMPLATE_PATH, encoding='utf8') as file:
+        html = file.read()
     for key in data:
         html = html.replace(f'[${key.upper()}]', str(data[key]))
 
-    links = find_links(directory, main)
-
     output_dir = translate_path(directory, src, dst)
     output_dir.mkdir(parents=True, exist_ok=True)
-    with open(output_dir / 'index.html', 'w', encoding='utf8') as f:
-        f.write(html)
+    with open(output_dir / 'index.html', 'w', encoding='utf8') as file:
+        file.write(html)
 
-    for link, title in links['files'].items():
+    for link, _ in links['files'].items():
         src_file = directory / link
         dst_file = translate_path(src_file, src, dst)
         copy(src_file, dst_file)
 
-    for link, title in links['directories'].items():
+    for link, txt in links['directories'].items():
         path = directory / link
-        generate_website(path, src, dst, siblings=links['directories'], title=title)
+        generate_website(path, src, dst, siblings=links['directories'], title=txt)
 
 
 #def generate_modules():

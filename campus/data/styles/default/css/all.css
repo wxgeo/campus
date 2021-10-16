@@ -163,13 +163,16 @@ main>:last-child {
 main p {
     margin: 1.5rem 4.5rem;
     padding:0;
+    display:flex;
+    position:relative;
 }
 
 
 main a,
 main a:visited {
     /* Geometry */
-    margin:5px 0;
+    margin:0;
+    margin-left:10px;
     padding:5px 15px;
     /* Borders */
     border-radius: 4px;
@@ -182,15 +185,16 @@ main a:visited {
 }
 
 
-main a::before {
-    content:"";
-    font-size: 4px;
+main .before-directory {
     background-image: url(../pic/dossier.svg);
     background-size: auto 100%;
     background-repeat: no-repeat;
-    height: 20px;
     width: 1.7rem;
-    display:inline-block;
+    height:1.7rem;
+    position:absolute;
+    left:-5px;
+    top:0px;
+
 }
 
 
