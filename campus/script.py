@@ -77,13 +77,13 @@ def init(force: bool = False) -> None:
     "Implement `campus init` command."
     # Copy styles data (ccs and pictures) in a .config folder.
     if force:
-        rmtree('.config', ignore_errors=True)
+        rmtree('.campus-config', ignore_errors=True)
         rmtree(OUTPUT_PATH, ignore_errors=True)
-    if isdir('.config'):
+    if isdir('.campus-config'):
         print('Nothing done, since repository seems already configured.\n'
               'Use `campus init --force` if you want to override existing configuration.')
         return
-    copytree(STYLE_PATH, '.config')
+    copytree(STYLE_PATH, '.campus-config')
 
     # Initialize root folder as a git repository if needed.
     if not isdir('.git'):
@@ -111,7 +111,7 @@ def init(force: bool = False) -> None:
 
 def _test_init() -> None:
     "Decorator function to assert "
-    if not Path('.config').is_dir():
+    if not Path('.campus-config').is_dir():
         print("WARNING: for security, this command can only be launched in an"
               " initialized campus root directory.\n"
               "Change to root directory, or initialized it using `campus init`.")
@@ -192,12 +192,12 @@ def indexall(create: bool = False) -> None:
 def make() -> None:
     "Implement `campus make` command."
     _test_init()
-    (OUTPUT_PATH / '.git').replace('.config/tmp_output_git')
+    (OUTPUT_PATH / '.git').replace('.campus-config/tmp_output_git')
     rmtree(OUTPUT_PATH)
     OUTPUT_PATH.mkdir()
-    Path('.config/tmp_output_git').replace(OUTPUT_PATH / '.git')
-    copytree(Path('.config/css'), OUTPUT_PATH / 'css')
-    copytree(Path('.config/pic'), OUTPUT_PATH / 'pic')
+    Path('.campus-config/tmp_output_git').replace(OUTPUT_PATH / '.git')
+    copytree(Path('.campus-config/css'), OUTPUT_PATH / 'css')
+    copytree(Path('.campus-config/pic'), OUTPUT_PATH / 'pic')
     generate_website(Path.cwd(), src=Path.cwd(), dst=OUTPUT_PATH, siblings={})
     print("campus make executed.")
 
