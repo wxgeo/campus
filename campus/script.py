@@ -13,9 +13,11 @@ from os.path import isdir, isfile
 from shutil import rmtree, copytree
 from pathlib import Path
 import re
+import sys
+from typing import Optional
 
 from .paths import OUTPUT_PATH, STYLE_PATH
-from .generate_website import generate_website
+from .generate_website import generate_website, MARKDOWN_LINK
 
 def run(*args, dry_run=False, **kw):
     'subprocess.run() called with `check=True`.'
@@ -24,42 +26,54 @@ def run(*args, dry_run=False, **kw):
         return None
     return _run(*args, check=True, **kw)
 
-def main(args=None):
+def main(args: Optional[list] = None) -> None:
     "Main entry point, called whenever `campus` command is executed."
     parser = ArgumentParser(description='Light content distribution system.')
     subparsers = parser.add_subparsers(help='sub-command help')
+    add_parser = subparsers.add_parser
     # create the parser for the "init" command
-    parser_init = subparsers.add_parser('init', help='initialize folder')
+    parser_init = add_parser('init', help='initialize folder')
     parser_init.add_argument('--force', action='store_true', help='init --force help')
     parser_init.set_defaults(func=init)
 
     # create the parser for the "make" command
-    parser_make = subparsers.add_parser('make', help='generate website (locally)')
+    parser_make = add_parser('make', help='generate website (locally)')
     parser_make.set_defaults(func=make)
 
     # create the parser for the "push" command
-    parser_push = subparsers.add_parser('push', help='generate and upload website')
+    parser_push = add_parser('push', help='generate and upload website')
     parser_push.add_argument('-m', '--message', type=str, help='push -m help')
     parser_push.set_defaults(func=push)
 
     #create the parser for the "index" command
-    parser_index = subparsers.add_parser('index', help='add file to index.md')
-    parser_index.add_argument('filename', metavar='FILENAME', type=str,
-                              help='add file FILENAME to index.md')
+    parser_index = add_parser('index', help='add file to index.md')
+    parser_index.add_argument('glob', metavar='FILENAME', type=str,
+                              help='Add file FILENAME to index.md.\n'
+                                   'Wildcars are supported ("chap*.pdf").')
+    parser_index.add_argument('-r', '--recursive', action='store_true',
+                              help='index --recursive help')
+    parser_index.add_argument('-f', '--create', action='store_true',
+                              help='Create index.md file if not found.')
     parser_index.set_defaults(func=index)
 
     #create the parser for the "indexall" command
-    parser_index = subparsers.add_parser('indexall', help='add every file and dir to index.md')
-    parser_index.set_defaults(func=indexall)
+    parser_indexall = add_parser('indexall',
+                                 help='Index every file and directory recursively.')
+    parser_indexall.add_argument('-f', '--create', action='store_true',
+                                 help='Create index.md file if not found.')
+    parser_indexall.set_defaults(func=indexall)
 
     parsed_args = parser.parse_args(args)
     try:
-        parsed_args.func(**vars(parsed_args))
-    except AttributeError:
+        # Launch the function corresponding to the given subcommand.
+        kwargs = vars(parsed_args)
+        kwargs.pop('func')(**kwargs)
+    except KeyError:
+        # No subcommand passed.
         parser.print_help()
 
 
-def init(force=False, **kw):
+def init(force: bool = False) -> None:
     "Implement `campus init` command."
     # Copy styles data (ccs and pictures) in a .config folder.
     if force:
@@ -82,7 +96,7 @@ def init(force=False, **kw):
         with open('.gitignore', 'a') as file:
             file.write(f'\n{OUTPUT_PATH.name}/\n')
 
-    index()
+    index(create=True)
 
     # Create the output folder, where the website will be generated.
     if not OUTPUT_PATH.is_dir():
@@ -94,54 +108,90 @@ def init(force=False, **kw):
     if not isdir(OUTPUT_PATH / '.git'):
         run(['git', 'init'], cwd=OUTPUT_PATH)
 
-def _add_to_index(path, index_md):
+
+def _test_init() -> None:
+    "Decorator function to assert "
+    if not Path('.config').is_dir():
+        print("WARNING: for security, this command can only be launched in an"
+              " initialized campus root directory.\n"
+              "Change to root directory, or initialized it using `campus init`.")
+        sys.exit(1)
+
+
+def _add_to_index(path: Path, index_md: Path) -> None:
     "Add `path` to index.md file."
 
-    with open(index_md, 'a') as file:
+    with open(index_md, 'a', encoding='utf8') as file:
         name = str(path.stem).replace('_', ' ')
         file.write(f'\n[{name}](<{path}>)\n')
         print(f"{name} indexed.")
 
 
-def index(glob=None, **kw):
+def _index(glob: str, parent: Path, recursive: bool = False) -> bool:
     """Implement `campus index` command.
 
-    Generate `index.md` file if needed and add all files matching `glob` to it."""
+    Generate `index.md` file if needed and add all files matching `glob` to it.
+
+    Hidden files or directories, ie. those starting with a dot (".mydir", ".myfile"),
+     are never indexed, though you may add them manually to a `index.md` file.
+    """
     # Create an empty index.md file
-    current_dir = Path.cwd()
-    index_md = (current_dir / 'index.md')
+    something_indexed = False
+    if recursive:
+        # Index all subdirectories content.
+        for child in sorted(parent.glob('*')):
+            # Skip hidden directories (directories whose name starts with a dot).
+            if child.is_dir() and child.name[0] != '.':
+                something_indexed |= _index(glob, child, recursive=True)
+    index_md = (parent / 'index.md')
     if not index_md.is_file():
-        with open(index_md, 'w') as file:
-            file.write(f"# {current_dir.name.replace('_', ' ')}\n\n")
-    if glob is None:
-        return
+        with open(index_md, 'w', encoding='utf8') as file:
+            file.write(f"# {parent.name.replace('_', ' ')}\n\n")
+        print(f"'{index_md}' file created.")
+    if not glob:
+        return False
     already_indexed = set()
-    with open(index_md) as file:
+    with open(index_md, encoding='utf8') as file:
         for line in file:
-            match = re.match(r'\s*\[.+\]\(\<?([^<>]+)\>?\)', line)
+            match = re.match(MARKDOWN_LINK, line)
             if match:
                 already_indexed.add(match.group(1))
-    indexed = False
-    for path in sorted(current_dir.glob(glob)):
-        path = Path(path).relative_to(Path.cwd())
-        str_path = str(path)
-        if (str_path != 'index.md' and str_path[0] != '.'
-                                   and str_path not in already_indexed):
-            _add_to_index(path, index_md)
-            indexed = True
-    if not indexed:
-        print("It seems there's nothing new to index.")
+    for child in sorted(parent.glob(glob)):
+        child = Path(child).relative_to(parent)
+        name = child.name
+        if (name != 'index.md' and name[0] != '.' and name not in already_indexed):
+            _add_to_index(child, index_md)
+            something_indexed = True
+    return something_indexed
 
-def indexall(**kw):
+
+def index(glob: str = '', recursive: bool = False, create: bool = False) -> None:
+    """Implement `campus index` command.
+
+    Generate `index.md` file if needed and add all files matching `glob` to it.
+
+    Hidden files or directories, ie. those starting with a dot (".mydir", ".myfile"),
+     are never indexed, though you may add them manually to a `index.md` file.
+    """
+    if not Path('index.md').is_file() and not create:
+        print("WARNING: trying to use `campus index` in a directory "
+              "which doesn't have an `index.md` file.\n"
+              "Use `--create` option if you want to create a new index.md file.")
+        sys.exit(1)
+    if not glob and not create:
+        print("WARNING: campus index argument missing !")
+    if not _index(glob, parent=Path.cwd(), recursive=recursive):
+        print(f"It seems there's nothing new to index.")
+
+
+def indexall(create: bool = False) -> None:
     "Implement `campus indexall` command."
-    index(glob='*')
+    index(glob='*', recursive=True, create=create)
 
-def make(**kw):
+
+def make() -> None:
     "Implement `campus make` command."
-    if not Path('.config').is_dir():
-        print("WARNING: this folder is not initialized as campus root directory.\n"
-              "Change to root directory, or initialized it using `campus init`.")
-        return
+    _test_init()
     (OUTPUT_PATH / '.git').replace('.config/tmp_output_git')
     rmtree(OUTPUT_PATH)
     OUTPUT_PATH.mkdir()
@@ -152,8 +202,9 @@ def make(**kw):
     print("campus make executed.")
 
 
-def push(message=None, **kw):
+def push(message: str = '') -> None:
     "Implement `campus push` command."
+    _test_init()
     # Commit changes in root directory (source), then push.
     commit_cmd = ['git', 'commit', '-a']
     if message:

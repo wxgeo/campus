@@ -124,8 +124,8 @@ nav li a.current {
 }
 
 nav li:first-child>a {
-    /*background-color: var(--color-dark);*/
-    border-radius: 0 0 0 1rem;
+    background-color: var(--color-dark);
+    /*border-radius: 0 0 0 1rem;*/
 }
 
 nav li:first-child>a:hover {

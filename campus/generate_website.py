@@ -32,13 +32,16 @@ On peut commencer par générer un dictionnaire :
 """
 from re import sub, search, Match
 from shutil import copy
+from typing import Tuple, Dict, Optional
 
-from mistune import markdown
+from mistune import markdown # type: ignore
 
 from .paths import INDEX_TEMPLATE_PATH, Path
 
 
-def assert_relative_to(path, src):
+MARKDOWN_LINK = '\\s*\\[[^]]+\\]\\(\\<?([^<>)]+)\\>?\\)'
+
+def assert_relative_to(path: Path, src: Path):
     "Raise a `ValueError` if path is not relative to `src`."
     try:
         path.relative_to(src)
@@ -46,7 +49,7 @@ def assert_relative_to(path, src):
         raise ValueError(f'"{path}" should be a subdirectory of "{src}".')
 
 
-def translate_path(path: Path, src, dst: Path) -> Path:
+def translate_path(path: Path, src: Path, dst: Path) -> Path:
     "Transform {src}/subpath into {dst}/subpath."
     assert_relative_to(path, src)
     return dst / path.relative_to(src)
@@ -58,7 +61,7 @@ def relative_depth(path: Path, src: Path) -> int:
     return len(path.parents) - len(src.parents)
 
 
-def extract_links(path: Path, html: str) -> ({str: {str: str}}, str):
+def extract_links(path: Path, html: str) -> Tuple[Dict[str, Dict[str, str]], str]:
     """Extract all links from html code, and add a <span> tag before them.
 
     The class of the <span> tag will specify the type of link, and may be used
@@ -70,7 +73,7 @@ def extract_links(path: Path, html: str) -> ({str: {str: str}}, str):
     directories = {}
     files = {}
 
-    def classify(match: Match):
+    def classify(match: Match) -> str:
         "Classify links (is it directory or a file ?)."
         # This is an internet link, pass...
         string = match.group(0)
@@ -97,7 +100,7 @@ def extract_links(path: Path, html: str) -> ({str: {str: str}}, str):
     return {'directories': directories, 'files': files}, html
 
 
-def find_title(html: str) -> str:
+def find_title(html: str) -> Optional[str]:
     "Return <h1> title content."
     match = search('<h1>([^<]+)</h1>', html)
     return match.group(1) if match else None
